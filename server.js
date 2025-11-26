@@ -4,10 +4,11 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
-
+const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static("public"));
 
 // Initialize SQLite DB
 const dbPath = path.join(__dirname, 'quotes.db');
@@ -42,6 +43,7 @@ app.post('/api/quote', (req, res) => {
     });
 });
 
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
