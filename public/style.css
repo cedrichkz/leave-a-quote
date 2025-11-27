@@ -6,7 +6,7 @@
 }
 
 .container{
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,8 +70,6 @@
     padding: 10px 15px;
     outline: none;
     border: solid;
-    margin-left: 40px;
-    margin-right: 40px;
 }
 
 .text-box-container{
