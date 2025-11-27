@@ -8,22 +8,24 @@ function updateTimestamp() {
     lastUpdated.textContent = 'Last updated: ' + now.toLocaleString();
 }
 
-fetch('http://localhost:3000/api/quote')
+fetch('/api/quote')
     .then(res => res.json())
     .then(data => {
     quote.textContent = data.text;
     lastUpdated.textContent = 'Last updated: ' + new Date(data.updated_at).toLocaleString();
-    });
+    })
+    .catch(err => console.error('Error fetching quote:', err));
 
-button.addEventListener('click', () => {
+
+function saveQuote() {
     const DEFAULT_QUOTE = 'Job your love';
-    const text = input.value;
+    const text = input.value.trim();
     if (!text) {
         quote.textContent = DEFAULT_QUOTE;
     }
     else {
         // Save new quote to backend
-        fetch('http://localhost:3000/api/quote', {
+        fetch('/api/quote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
@@ -32,7 +34,15 @@ button.addEventListener('click', () => {
         .then(data => {
             quote.textContent = data.text;
             lastUpdated.textContent = 'Last updated: ' + new Date(data.updated_at).toLocaleString();
-        });
+        })
+         .catch(err => console.error('Error saving quote:', err));
     }
     input.value = '';
+};
+
+button.addEventListener('click', () => saveQuote());
+input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        saveQuote();
+    }
 });
