@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config();
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,37 +12,55 @@ app.use(express.json());
 
 app.use(express.static("public"));
 
-// Initialize SQLite DB
-const dbPath = path.join(__dirname, 'quotes.db');
-const db = new sqlite3.Database(dbPath);
+// Initialize Supabase client
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-db.serialize(() => {
-    db.run('CREATE TABLE IF NOT EXISTS quote (id INTEGER PRIMARY KEY, text TEXT, updated_at TEXT)');
-    // Insert default quote if table is empty
-    db.get('SELECT COUNT(*) as count FROM quote', (err, row) => {
-        if (row.count === 0) {
-            db.run('INSERT INTO quote (text, updated_at) VALUES (?, ?)', ['Job your love', new Date().toISOString()]);
-        }
-    });
-});
+// Optional: insert default quote if table is empty
+async function insertDefaultQuote() {
+  const { data, error } = await supabase
+    .from('quote')
+    .select('*');
+  
+  if (error) {
+    console.error('Error checking default quote:', error.message);
+    return;
+  }
+
+  if (data.length === 0) {
+    await supabase
+      .from('quote')
+      .insert([{ text: 'Job your love', updated_at: new Date().toISOString() }]);
+    console.log('Inserted default quote');
+  }
+}
+insertDefaultQuote();
 
 // Get current quote
-app.get('/api/quote', (req, res) => {
-    db.get('SELECT text, updated_at FROM quote ORDER BY id DESC LIMIT 1', (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(row);
-    });
+app.get('/api/quote', async (req, res) => {
+  const { data, error } = await supabase
+    .from('quote')
+    .select('text, updated_at')
+    .order('id', { ascending: false })
+    .limit(1);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
 });
 
 // Update quote
-app.post('/api/quote', (req, res) => {
-    const { text } = req.body;
-    if (!text) return res.status(400).json({ error: 'Quote text required' });
-    const updatedAt = new Date().toISOString();
-    db.run('INSERT INTO quote (text, updated_at) VALUES (?, ?)', [text, updatedAt], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ text, updated_at: updatedAt });
-    });
+app.post('/api/quote', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'Quote text required' });
+
+  const updatedAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('quote')
+    .insert([{ text, updated_at: updatedAt }])
+    .select();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+  console.log(`Inserted new quote ${text} at ${updatedAt}`);
 });
 
 // Start server
